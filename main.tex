@@ -1,0 +1,305 @@
+\documentclass{report}
+
+\usepackage{graphicx} % for images
+
+\usepackage{amsmath}                % |
+\usepackage{amsfonts}               % |
+\usepackage{amssymb}                % | for fonts and display
+
+\usepackage[normalem]{ulem}         % for underline
+\usepackage[margin=1.5in]{geometry} % for margins
+\usepackage{changepage}             % for adjustwidth
+\usepackage{mdframed}               % for siderules
+
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+\title{Algorithms II - CS450}       % |
+\author{Jacopo Philip Moretti}      % |
+\date{Fall 2024}                    % | EDITME!
+
+\def\labelitemi{\ensuremath{\triangleright}} % |> items
+\def\labelitemii{\ensuremath{\blacktriangleright}} % |> items
+
+\newcommand{\RR}{\ensuremath{\mathbb{R}}}
+\newcommand{\NN}{\ensuremath{\mathbb{N}}}
+\newcommand{\II}{\ensuremath{\mathcal{I}}}
+\newmdenv[topline=false, bottomline=false, rightline=false, skipabove=\topsep, skipbelow=\topsep]{boxxx}
+
+\newcommand{\sep}{
+    \begin{center}
+        \noindent\rule{0.35\textwidth}{0.5pt}
+    \end{center}
+}
+
+\newcommand{\aparte}[2]{
+    \vspace{0.5em}
+    % \leavevmode\reversemarginpar\marginpar{\hfill \textit{#1}}
+    \begin{adjustwidth}{20pt}{0pt}
+        \begin{boxxx}
+            \textbf{#1.}\ #2
+        \end{boxxx}
+    \end{adjustwidth}
+    \vspace{0.75em}
+}
+
+\renewcommand\thesection{\arabic{section}}
+\newcommand{\takes}{\ensuremath{\leftarrow}}
+
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{claim*}{Claim}
+
+\begin{document}
+  \maketitle
+
+  \chapter*{Introduction}
+
+  Hello ! I'm jack \texttt{:3}. I am a student who likes to retype their notes in LaTeX. If this can be of any use to you, I'm happy ! Do shoot me an email if you find any mistakes or unclear passages. Elements of notation or other global considerations will be added here as the course goes along. Do refer back to this if something weird happens later !
+
+  In the meantime, enjoy the course and the ride \texttt{:3}.
+
+  \section*{Notation}
+  \begin{itemize}
+    \item Let $S \subset A$ a subset over a given support set. Then, for $i \in A$, we denote the following: $S + i$. More generally, when two sets $A, B$ are disjoint, their union will be represented as $A + B =: A \cup B$, as a shorthand.
+  \end{itemize}
+
+  \pagebreak
+
+  \tableofcontents
+
+  \pagebreak
+
+  \chapter{Greed is good, actually (sometimes (when?))}
+
+  \marginpar{\textit{Week 1\\Lecture 1}}
+
+  \section{Warmup: Maximal Spanning Tree (MST)}
+
+  \begin{definition}
+    Given a connected graph $G = (V, E)$, and a weight function $w: E \to \RR$, we say that a tree $T \subseteq E$ is a \emph{maximal spanning tree} if it maximizes the sum of the weights of its edges.
+  \end{definition}
+
+  MSTs are ubiquitous in algorithms! To find them, we use \emph{Kruskal's algorithm}.
+
+	\begin{center}
+    \begin{minipage}{.9\linewidth}
+      \begin{algorithm}[H]
+        \caption{Kruskal's Algorithm}
+        \label{Kruskal}
+        \begin{algorithmic}[1]
+          \item[] \textbf{procedure} \textsc{Greedy}$(G, w)$:
+          \STATE Sort and label the edges by their weigths: \[w_{e_1} \geqslant w_{e_2} \geqslant ... \geqslant  w_{e_{|E|}}\]
+          \STATE $S \takes \emptyset$
+          \FOR{$i \takes 1 \text{ to } |E|$}
+            \IF{$S + e_i$ is acyclic}
+              \STATE $S \takes S + e_i$
+            \ENDIF
+          \ENDFOR
+          \RETURN $S$
+        \end{algorithmic}
+      \end{algorithm}
+    \end{minipage}
+  \end{center}
+
+  Where lines 3 to 7 make up the "greedy" part of the algorithm. This is the "natural" approach, but we can prove that it \textit{actually} works !
+
+  \begin{theorem}
+  	Procedure \textsc{Greedy} finds a Maximal Spanning Tree for any graph $G = (V, E)$ and weight function $w$ passed as input.
+  \end{theorem}
+  \aparte{Proof}{
+    Suppose it's not the case, and let $S = \{s_1, ..., s_n\}$ be its output. We suppose that there exists a tree $T = \{t_1, ..., t_n\}$ such that $w(T) > w(S)$. We also sort the edges in $S$ and $T$ in such a way that $w(t_i) > w(t_j)$ if and only if $i > j$, and similar for $S$.
+
+    We know that there exist indices where $w(t_p) > w(s_p)$, and we denote $p$ the smallest of such indices. We let $A = \{t_1, ..., t_p\}$, and $B = \{s_1, ..., s_p\}$.
+
+    We point out a key property for these two sets:
+    \begin{adjustwidth}{40pt}{0pt}
+      Key property: $\exists e \in A \setminus B : B + e$ is acyclic.
+    \end{adjustwidth}
+
+    This is because an acyclic graph with $k$ edges always has $n - k$ connected components.
+
+    We know that \[w(e) \geqslant w(t_p) \geqslant w(s_p)\] Therefore, when $e$ was considered by our algorithm, it "held" in state $B' \subseteq B$ (we know it was before because $w(e) > w(s_p)$). However, if $B + e$ is acyclic, the we know that $B' + e$ is acyclic as well, due to the downward closedness of acyclicity. Therefore, \textsc{Greedy} should have chosen it, which contradicts our assumption.
+
+    \hfill \ensuremath{\square}
+  }
+
+  \section{Matroids}
+
+  \subsection{Definitions}
+
+  It's somewhat surprising that our naive, greedy approach to algorithm design gives us an optimal algorithm. Is it possible to generalize this result to rigorously define the algorithms where the greedy answer is optimal? To do this, we can define what a matroid is.
+
+  \begin{definition}
+    A tuple $M = (E, \II)$, with $E$ a ground set, and $\II$ a family of subsets of $E$, is a \emph{matroid} if and only if, for $X, Y \subseteq E$:
+    \begin{itemize}
+      \item[$(I_1)$] $(X \subseteq Y \land Y \in \II) \Rightarrow X \in \II$
+      \item[$(I_2)$] $(X \in \II \land Y \in \II \land |Y| > |X|) \Rightarrow \exists e \ \in X \setminus Y: X + e \in \II$
+    \end{itemize}
+    We call independent sets the elements of $\II$, and we say that a maximal independent set is an independent set that isn't the proper subset of any other independent set.\footnotemark. Maximal independent sets are also called bases.
+  \end{definition}
+
+  \footnotetext{One intuition for this is seeing the MISs as the roots (or leafs) of the tree structure generated by axiom $(I_1)$, meaning they're maximal with respect to inclusion}
+
+  The reader can convince themselves that the structure $\tilde M = (E, \II)$, where $E$ is the set of edges of a graph $G$, and $\II = \{F \subseteq E: F \text{ is acyclic}\}$ is a matroid. We can now try to redefine Kruskal's algorithm on matroids !
+
+  \begin{center}
+    \begin{minipage}{.9\linewidth}
+      \begin{algorithm}[H]
+        \caption{Kruskal's Algorithm on Matroids}
+        \label{MatroidKruskal}
+        \begin{algorithmic}[1]
+          \item[] \textbf{procedure} \textsc{MatroidGreedy}$(G, w)$:
+          \STATE Sort and label the \emph{ground set elements} by their weigths: \[w_{e_1} \geqslant w_{e_2} \geqslant ... \geqslant  w_{e_{|E|}}\]
+          \STATE $S \takes \emptyset$
+          \FOR{$i \takes 1 \text{ to } |E|$}
+          	\IF{$S + e_i \in \II$}
+          	  \STATE $S \takes S + e_i$
+          	\ENDIF
+          \ENDFOR
+          \RETURN $S$
+        \end{algorithmic}
+      \end{algorithm}
+    \end{minipage}
+  \end{center}
+
+  The idea remains the exact same ! We just replace the condition on acyclicity with a condition on the belonging to $\II$. Does this still work?
+  \begin{theorem}
+  	For any ground set $E$, and $\II$ a family of subsets of $E$, \textsc{MatroidGreedy} finds a maximal weight base of $M$ for every $w: E \to \RR$ if and only if $M = (E, \II)$ is a matroid.
+  \end{theorem}
+  \aparte{Proof}{
+    Since we have a bi-implication, we will proceed by proving both directions separately:
+
+    \begin{itemize}
+      \item[$(\Leftarrow)$] Similar as the previous proof, but swapping out the acyclicity with independence.
+      \item[$(\Rightarrow)$] For this direction, a supportive claim will be of use to us.
+        \begin{claim*}
+          Suppose $(E, \II)$ is not a matrioid. Then, there exists a weight function $w: E \to \RR$ such that \textsc{MatroidGreedy} does not return the maximum weight base.
+        \end{claim*}
+        Suppose $M$ is not a matroid. Two cases present:
+        \begin{itemize}
+          \item Suppose $M$ violates axiom $(I_1)$ (downward closedness). Then there exist two subsets $S, T \subseteq E$ such that $S \subset T, T \in \II \land S \not\in \II$. We can define weight a weight function $\tilde w$ such that:
+          \[
+            \tilde w(e) = \begin{cases}
+              2 , &e \in S \\
+              1 , &e \in T \setminus S \\
+              0 , &e \not\in T
+            \end{cases}
+          \]
+          Under these conditions, the algorithm will first consider all elements of $S$, since they have a higher weight. Among them, it will take a subset $S'$, which will necessarily be a proper subset since $S \not\in \II$. After $S'$, the algorithm will at most pick $T \setminus S$. Therefore, the weight has bounds:
+          \[
+            C(\text{\textsc{MatroidGreedy}}) \leqslant |T \setminus S| + 2|S'| < |T \setminus S| + 2|S| < w(T)
+          \]
+          Which means our algorithm didn't return the maximum weight base.
+          \item Suppose now axiom $(I_1)$ holds, but axiom $(I_2)$ (extension) is violated. This means that there exists two independent sets $S, T \in \II$ such that $|S| < |T|$ and for any element $i \in T$, $S + i$ is not an independent set. We claim that function $\tilde w$:
+          \[
+            \tilde w(e) = \begin{cases}
+              1 + \frac{1}{2|S|}, &e \in S \\
+              1,            &e \in T \setminus S \\
+              0,            &e \not\in T
+            \end{cases}
+          \]
+          is such that \textsc{MatroidGreedy} doesn't find the maximal base. Because downwardness, \textsc{Greedy} will select all of $S$, which yields a base of weight $w(S) = |S| \left(1 + \frac{1}{2|S|}\right) = |S| + \frac{1}{2} < w(T)$ since $|T| > |S|$.
+        \end{itemize}
+    \end{itemize}
+  }
+
+  \marginpar{\textit{Week 1\\Lecture 2}}
+
+  \subsection{Matroid intersections}
+
+  We mostly consider the problem of the form: given a matroid $M = (E, \II)$ and a weight function $w: E \to \RR$, find \[ \max_{F \in \II} w(F) \] More often than not, this kind of problem can't be solved directly, but we can find some new techniques to help us tackle the issue efficiently. But first:
+
+  \aparte{Examples of matroids}{
+    Recall that a matroid is a pair $M = (E, \II)$ where $E$ is the \emph{ground set} and $\II$ is a family of subsets of $E$ such that the two axioms hold:
+    \begin{itemize}
+      \item[$(I_1)$] $X \subseteq Y \land Y \in \II \Rightarrow X \in \II$
+      \item[$(I_2)$] $X, Y \in \II \land |Y| > |X| \Rightarrow \exists \ e \in Y \setminus X : X + e \in \II$
+    \end{itemize}
+
+    Let us consider a few examples of constructions that have matroid structure.
+
+    \begin{itemize}
+      \item \emph{graphic matroid}: given $G = (V, E)$ a graph, we know that \[M = (E, \II) \text{ where } \II = \{F \subseteq E | F \text{ is acyclic}\}\]
+      \item \emph{$k$-uniform matroid}: on an arbitrary ground set $E$, and with $k \in \NN$, we define $M = (E, \II)$ where \[\II = \{F \subseteq E | |F| \leqslant k\}\]
+      \item \emph{partition matroid}: $M = (E, \II)$, with $E = \bigcup_i E_i$ with $E_i$ a disjoint family of sets, and $\II$ such that \[\II = \{F \subseteq E | |F \cap E_i| \leqslant k_i \forall i\}\]
+      \item \emph{linear matroid}: let $A$ a matrix, and define $E$ the index set of its columns. For $X \subseteq E$, denote $A_X$ the matrix consisting of the columns indexed by $X$. Then, $M = (E, \II)$ is a matroid, with \[\II = \{X \subseteq E | \operatorname{rank}(A_X) = |X|\}\] For an example of uses of a linear matroid, refer back to Annex A.
+      \item \emph{truncated matroid}: Let $M = (E, \II)$ be a matroid. Then from it we can define a truncated matroid $M_k = (E, \II_k)$, with $k \in \NN$, such that \[\II = \{X \in \II | |X| \leqslant k\}\]
+    \end{itemize}
+
+    Verifying the axioms for these example matroids is a very good exercise that we leave to the reader.
+  }
+
+  To define matroid intersections, we define a problem they're of use in:
+  \begin{definition}
+    Given a graph $G = (V, E)$, find a matching of maximal size. Recall that $M \subseteq E$ is a matching if and only if every vertex is touched only once:
+
+    \[
+      \forall \ v \in V, \left|\{e \in M : v \in e\} \leqslant 1\right|
+    \]
+  \end{definition}
+
+  We can try to define a matroid to find the matchings efficiently using Kruskal's \textsc{Greedy}. We tentatively define $\tilde M = (E, \tilde\II)$, where \[\tilde \II = \{M \subseteq E : M \text{ is a matching}\}\] and we realize pretty fast that this doesn't work, as we can easily construct counterexamples to $(I_2)$.
+
+  It's safe to assume that we can't build this kind of metroid, but the answer might be more exotic...
+
+  \begin{definition}
+    Given two matroids $M_1 = (E, \II_1), M_2 = (E, \II_2)$ their \emph{intersection} is defined as :
+    \[
+      M_1 \cap M_2 := (E, \II_1 \cap \II_2)
+    \]
+  \end{definition}
+  \begin{theorem}[Edmonds, Lawler, 70s]
+    There exists an efficient algorithm to find the max weight independent set between two matroids.
+  \end{theorem}
+  No proof ! But we can convince ourselves of this by looking at a few problems.
+  \aparte{Matroid intersections}{
+    Here are a few problems that are solved by matroid intersections:
+    \begin{itemize}
+      \item \emph{bipartite matching}: Consider a graph $G = (V, E)$ that admits the partition $A + B = V$ such that every edge in $E$ is between a node in $A$ and another in $B$. We can define this problem in terms of the intersection $M_A \cap M_B$, where \[\II_A = \{F \subseteq E : |F \cap \delta(a)| \leqslant 1 \forall \ a \in A\}\] and similarly for $B$. In this expression, $\delta: V \to \mathcal{P}(E)$ is the function returning all the proximal edges in $E$ to the input vertex.
+
+      \item \emph{colorful spanning trees}: Let $G = (V, E)$ be a graph, and define over its edges the function $\texttt{color}: E \to \mathbb{C}$ where $\mathbb{C}$ is the set of possible colors. We say that a tree $T$ is \emph{colorful} if every edge in $T$ is a different color. This problem can be studied as the intersection of the graph matroid of $G$, $M_1 = (E, I_1)$, and of the partition matroid of the color classes, defined as $M_2 = (\bigcup E_i, I_2)$ where $E_i = \{\text{all edges of color i}\}$ and \[I_2 = \{F \subseteq E : |F \cap E_i| \leqslant 1 \ \forall i\} \]
+
+      \item \emph{arborescences}: Consider a digraph $D = (V, E)$ and a root $r \in V$. Finding arborescences (aka spanning trees directed away from $r$) is equivalent to finding maximal bases in the intersection matroid between
+      \begin{itemize}
+        \item $M_1$, the graphical matroid of $G$, which is $D$ but made undirected by making all edges bidirectional.
+        \item and $M_2$, the partition matroid such that \[\II_i = \{F \subseteq E : |F \cap \delta^-(v)| \leqslant 1 \  \forall v \in V\}\] where $\delta^-(v)$ returns the set of incoming edges for all vertices that aren't $r$, and the empty set for $r$.
+      \end{itemize}
+    \end{itemize}
+  }
+
+  \subsection{Case study on matroid intersection algorithms}
+
+  We consider the algorithm for maximum cardinality bipartite matching. Recall that a \emph{path} is a sequence of vertices $(v_0, v_1, ..., v_n)$ where $(v_i, v_{i + 1}) \in E \ \forall i$.
+  \begin{definition}
+    An \emph{alternating path} with respect to a matching $M$ is a path that alternates between $M$ and $E \setminus M$.
+
+    An \emph{augmenting path} with respect to a matching $M$ is an alternating path that starts and ends on an unmatched vertex.
+  \end{definition}
+
+  There exists a known algorithm to find augmenting paths:
+  \begin{center}
+    \begin{minipage}{.9\linewidth}
+      \begin{algorithm}[H]
+        \caption{Augmenting Path Algorithm}
+        \label{AugmentingPaths}
+        \begin{algorithmic}[1]
+          \item[] \textbf{procedure} \textsc{Augment}$(G)$:
+          \STATE $M \takes \emptyset$
+          \WHILE{$\exists$ augmenting path $P$ with respect to $M$}
+            \STATE $M \takes M \Delta P = (M \setminus P) + (P \setminus M)$
+          \ENDWHILE
+          \RETURN $M$
+        \end{algorithmic}
+      \end{algorithm}
+    \end{minipage}
+  \end{center}
+
+  This motivates:
+  \begin{theorem}
+    A matching $M$ is a max cardinality matching if and only if there doesn't exist an augmenting path with respect to $M$.
+  \end{theorem}
+
+  \chapter*{Annex A : Linear Matroid Application}
+
+\end{document}
